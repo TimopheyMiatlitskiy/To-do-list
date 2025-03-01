@@ -4,3 +4,6 @@
 
 /.vs/ToDoList/FileContentIndex
 /obj
+/.vs/ToDoList
+/bin/Debug/net9.0
+/.vs
