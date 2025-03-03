@@ -2,7 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using static HttpMethodsLogic;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddDbContext<TodoDb>(opt => opt.UseInMemoryDatabase("TodoList"));
+
+builder.Services.AddSingleton(new DatabaseConfig(builder.Configuration));
+builder.Services.AddSingleton<TodoRepository>();
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApiDocument(config =>
@@ -12,6 +16,10 @@ builder.Services.AddOpenApiDocument(config =>
     config.Version = "v1";
 });
 var app = builder.Build();
+
+var databaseConfig = app.Services.GetRequiredService<DatabaseConfig>();
+DatabaseInitializer.Initialize(databaseConfig);
+
 if (app.Environment.IsDevelopment())
 {
     app.UseOpenApi();

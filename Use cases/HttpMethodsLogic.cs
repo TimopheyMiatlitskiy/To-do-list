@@ -1,56 +1,36 @@
-﻿using Microsoft.EntityFrameworkCore;
-
-public class HttpMethodsLogic
+﻿public class HttpMethodsLogic
 {
-    public static async Task<IResult> GetAllTodos(TodoDb db)
+    public static async Task<IResult> GetAllTodos(TodoRepository repository)
     {
-        return TypedResults.Ok(await db.Todos.ToArrayAsync());
+        return TypedResults.Ok(await repository.GetAllTodos());
+    }
+    
+    public static async Task<IResult> GetCompleteTodos(bool isComplete, TodoRepository repository)
+    {
+        var todos = await repository.GetAllTodos();
+        return TypedResults.Ok(todos.Where(todo => todo.IsComplete == isComplete).ToList());
     }
 
-    public static async Task<IResult> GetCompleteTodos(TodoDb db)
+    public static async Task<IResult> CreateTodo(Todo todo, TodoRepository repository)
     {
-        return TypedResults.Ok(await db.Todos.Where(t => t.IsComplete).ToListAsync());
-    }
-
-    public static async Task<IResult> GetTodo(int id, TodoDb db)
-    {
-        return await db.Todos.FindAsync(id)
-            is Todo todo
-                ? TypedResults.Ok(todo)
-                : TypedResults.NotFound();
-    }
-
-    public static async Task<IResult> CreateTodo(Todo todo, TodoDb db)
-    {
-        db.Todos.Add(todo);
-        await db.SaveChangesAsync();
-
+        await repository.CreateTodo(todo);
         return TypedResults.Created($"/todoitems/{todo.Id}", todo);
     }
 
-    public static async Task<IResult> UpdateTodo(int id, Todo inputTodo, TodoDb db)
+    public static async Task<IResult> UpdateTodo(int id, Todo inputTodo, TodoRepository repository)
     {
-        var todo = await db.Todos.FindAsync(id);
+        var todo = await repository.GetTodoById(id);
+        if (todo is null)
+            return TypedResults.NotFound();
 
-        if (todo is null) return TypedResults.NotFound();
-
-        todo.Name = inputTodo.Name;
-        todo.IsComplete = inputTodo.IsComplete;
-
-        await db.SaveChangesAsync();
-
+        inputTodo.Id = id;
+        await repository.UpdateTodo(inputTodo);
         return TypedResults.NoContent();
     }
-
-    public static async Task<IResult> DeleteTodo(int id, TodoDb db)
+    
+    public static async Task<IResult> DeleteTodo(int id, TodoRepository repository)
     {
-        if (await db.Todos.FindAsync(id) is Todo todo)
-        {
-            db.Todos.Remove(todo);
-            await db.SaveChangesAsync();
-            return TypedResults.NoContent();
-        }
-
-        return TypedResults.NotFound();
+        var rowsAffected = await repository.DeleteTodo(id);
+        return rowsAffected > 0 ? TypedResults.NoContent() : TypedResults.NotFound();
     }
 }
